@@ -1,9 +1,8 @@
-import { TaskState } from '@jellyfin/sdk/lib/generated-client/models/task-state';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import ConfirmDialog from 'components/ConfirmDialog';
@@ -20,23 +19,17 @@ import useRestartServer from '../features/system/api/useRestartServer';
 import useLiveTasks from '../features/tasks/hooks/useLiveTasks';
 import RunningTasksWidget from '../components/widgets/RunningTasksWidget';
 import DevicesWidget from '../components/widgets/DevicesWidget';
-import { useStartTask } from '../features/tasks/api/useStartTask';
 import ItemCountsWidget from '../components/widgets/ItemCountsWidget';
 
 export const Component = () => {
     const { api } = useApi();
     const [ isRestartConfirmDialogOpen, setIsRestartConfirmDialogOpen ] = useState(false);
     const [ isShutdownConfirmDialogOpen, setIsShutdownConfirmDialogOpen ] = useState(false);
-    const startTask = useStartTask();
     const restartServer = useRestartServer();
     const shutdownServer = useShutdownServer();
     const queryClient = useQueryClient();
 
     const { data: tasks } = useLiveTasks({ isHidden: false });
-
-    const librariesTask = useMemo(() => (
-        tasks?.find((value) => value.Key === 'RefreshLibrary')
-    ), [ tasks ]);
 
     const promptRestart = useCallback(() => {
         setIsRestartConfirmDialogOpen(true);
@@ -53,16 +46,6 @@ export const Component = () => {
     const closeShutdownDialog = useCallback(() => {
         setIsShutdownConfirmDialogOpen(false);
     }, []);
-
-    const onScanLibraries = useCallback(() => {
-        const scanLibrariesTask = tasks?.find((value) => value.Key === 'RefreshLibrary');
-
-        if (scanLibrariesTask?.Id) {
-            startTask.mutate({
-                taskId: scanLibrariesTask.Id
-            });
-        }
-    }, [ startTask, tasks ]);
 
     const onRestartConfirm = useCallback(() => {
         restartServer.mutate();
@@ -110,10 +93,8 @@ export const Component = () => {
                     <Grid item xs={12} md={7} lg={7} xl={6}>
                         <Stack spacing={3}>
                             <ServerInfoWidget
-                                onScanLibrariesClick={onScanLibraries}
                                 onRestartClick={promptRestart}
                                 onShutdownClick={promptShutdown}
-                                isScanning={librariesTask?.State !== TaskState.Idle}
                             />
                             <ItemCountsWidget />
                             <RunningTasksWidget tasks={tasks} />
