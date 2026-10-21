@@ -57,6 +57,7 @@ describe('s3Providers', () => {
         expect(normalizeRegion(S3Provider.Wasabi, 'https://s3.ap-northeast-1.wasabisys.com/')).toBe('ap-northeast-1');
         expect(normalizeRegion(S3Provider.Wasabi, 'https://s3.wasabisys.com')).toBe('us-east-1');
         expect(normalizeRegion(S3Provider.Aws, 'US-EAST-2')).toBe('us-east-2');
+        expect(normalizeRegion(S3Provider.Aws, 'https://s3.cn-north-1.amazonaws.com.cn')).toBe('cn-north-1');
     });
 
     it('asks for what the provider needs', () => {

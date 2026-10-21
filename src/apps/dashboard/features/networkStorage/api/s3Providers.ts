@@ -22,8 +22,8 @@ const R2_HOST = /^([0-9a-f]{32})\.r2\.cloudflarestorage\.com$/i;
 const B2_HOST = /^s3\.([a-z0-9-]+)\.backblazeb2\.com$/i;
 const WASABI_HOST = /^s3\.([a-z0-9-]+)\.wasabisys\.com$/i;
 const WASABI_DEFAULT_HOST = 's3.wasabisys.com';
-// Only the regional endpoint the preset builds; others, such as s3-accelerate, are kept as entered.
-const AWS_HOST = /^s3\.([a-z]{2}(?:-gov|-iso[a-z]*)?-[a-z]+-\d)\.amazonaws\.com$/i;
+// Only the regional endpoint the preset builds, under amazonaws.com.cn for China; others, such as s3-accelerate, are kept as entered.
+const AWS_HOST = /^s3\.([a-z]{2}(?:-gov|-iso[a-z]*)?-[a-z]+-\d)\.amazonaws\.com(?:\.cn)?$/i;
 
 const getHost = (value: string) => {
     const text = value.trim();
