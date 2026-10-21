@@ -42,7 +42,7 @@
     "NetworkStorageSourceCheck": "检查",
     "NetworkStorageNoAccesses": "尚未添加访问权限。",
     "NetworkStorageEndpoint": "Endpoint",
-    "NetworkStorageEndpointHelp": "例如 http://minio.lan:9000。",
+    "NetworkStorageEndpointHelp": "例如 http://minio.lan:9000。留空表示 Amazon S3。",
     "NetworkStorageBucket": "Bucket",
     "NetworkStorageBucketHelp": ".strm 中 s3://bucket/key 里的桶名。",
     "NetworkStorageRegion": "Region",

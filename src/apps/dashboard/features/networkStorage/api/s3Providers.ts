@@ -21,6 +21,7 @@ export interface ProviderSettings {
 const R2_HOST = /^([0-9a-f]{32})\.r2\.cloudflarestorage\.com$/i;
 const B2_HOST = /^s3\.([a-z0-9-]+)\.backblazeb2\.com$/i;
 const WASABI_HOST = /^s3\.([a-z0-9-]+)\.wasabisys\.com$/i;
+const WASABI_DEFAULT_HOST = 's3.wasabisys.com';
 // Only the regional endpoint the preset builds; others, such as s3-accelerate, are kept as entered.
 const AWS_HOST = /^s3\.([a-z]{2}(?:-gov|-iso[a-z]*)?-[a-z]+-\d)\.amazonaws\.com$/i;
 
@@ -69,6 +70,8 @@ export const normalizeAccountId = (value: string) => R2_HOST.exec(getHost(value)
 /** The region typed or pasted: a whole endpoint of the provider is taken too. */
 export const normalizeRegion = (provider: S3Provider, value: string) => {
     const host = getHost(value);
+    // The endpoint without a region is the one of us-east-1.
+    if (provider === S3Provider.Wasabi && host === WASABI_DEFAULT_HOST) return 'us-east-1';
     const patterns: Partial<Record<S3Provider, RegExp>> = { [S3Provider.B2]: B2_HOST, [S3Provider.Wasabi]: WASABI_HOST, [S3Provider.Aws]: AWS_HOST };
     const pattern = patterns[provider];
     return (pattern && host ? pattern.exec(host)?.[1] : undefined) ?? value.trim().toLowerCase();

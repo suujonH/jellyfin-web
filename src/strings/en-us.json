@@ -42,7 +42,7 @@
     "NetworkStorageSourceCheck": "Check",
     "NetworkStorageNoAccesses": "No access has been added.",
     "NetworkStorageEndpoint": "Endpoint",
-    "NetworkStorageEndpointHelp": "For example http://minio.lan:9000.",
+    "NetworkStorageEndpointHelp": "For example http://minio.lan:9000. Leave empty for Amazon S3.",
     "NetworkStorageBucket": "Bucket",
     "NetworkStorageBucketHelp": "The bucket the .strm files name in s3://bucket/key.",
     "NetworkStorageRegion": "Region",

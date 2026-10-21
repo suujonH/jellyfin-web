@@ -175,7 +175,6 @@ const AccessForm = ({ access: initial, onSaved, onCancel }: AccessFormProps) => 
                     {provider === S3Provider.Custom && (
                         <>
                             <TextField
-                                required
                                 label={globalize.translate('NetworkStorageEndpoint')}
                                 helperText={globalize.translate('NetworkStorageEndpointHelp')}
                                 value={access.Endpoint ?? ''}
@@ -233,7 +232,8 @@ const AccessForm = ({ access: initial, onSaved, onCancel }: AccessFormProps) => 
                                 control={<Switch checked={access.UsePathStyle} onChange={e => setField('UsePathStyle', e.target.checked)} />}
                             />
                         )}
-                        {(provider === S3Provider.Aws || provider === S3Provider.Custom || access.HasSessionToken) && (
+                        {/* A token entered or stored is sent with any provider, so it stays visible. */}
+                        {(provider === S3Provider.Aws || provider === S3Provider.Custom || access.HasSessionToken || !!access.SessionToken) && (
                             <TextField
                                 type='password'
                                 label={globalize.translate('NetworkStorageSessionToken')}

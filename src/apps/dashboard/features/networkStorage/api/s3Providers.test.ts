@@ -55,6 +55,7 @@ describe('s3Providers', () => {
         expect(normalizeAccountId(` ${ACCOUNT} `)).toBe(ACCOUNT);
         expect(normalizeRegion(S3Provider.B2, 's3.us-west-004.backblazeb2.com')).toBe('us-west-004');
         expect(normalizeRegion(S3Provider.Wasabi, 'https://s3.ap-northeast-1.wasabisys.com/')).toBe('ap-northeast-1');
+        expect(normalizeRegion(S3Provider.Wasabi, 'https://s3.wasabisys.com')).toBe('us-east-1');
         expect(normalizeRegion(S3Provider.Aws, 'US-EAST-2')).toBe('us-east-2');
     });
 
