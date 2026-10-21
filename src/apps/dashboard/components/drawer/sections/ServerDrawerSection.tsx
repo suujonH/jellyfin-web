@@ -6,6 +6,7 @@ import Palette from '@mui/icons-material/Palette';
 import People from '@mui/icons-material/People';
 import PlayCircle from '@mui/icons-material/PlayCircle';
 import Settings from '@mui/icons-material/Settings';
+import Storage from '@mui/icons-material/Storage';
 import Collapse from '@mui/material/Collapse';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -115,6 +116,17 @@ const ServerDrawerSection = () => {
                     </ListItemLink>
                 </List>
             </Collapse>
+            <ListItem disablePadding>
+                <ListItemLink
+                    to='/dashboard/networkstorage/status'
+                    includePaths={[ '/dashboard/networkstorage', '/dashboard/networkstorage/access', '/dashboard/networkstorage/external' ]}
+                >
+                    <ListItemIcon>
+                        <Storage />
+                    </ListItemIcon>
+                    <ListItemText primary={globalize.translate('HeaderNetworkStorage')} />
+                </ListItemLink>
+            </ListItem>
             <ListItem disablePadding>
                 <ListItemButton onClick={onPlaybackSectionClick}>
                     <ListItemIcon>
