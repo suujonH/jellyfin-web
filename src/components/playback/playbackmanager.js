@@ -2902,7 +2902,9 @@ export class PlaybackManager {
 
                     playMethod = mediaSource.SupportsDirectPlay ? 'DirectPlay' : 'DirectStream';
                 } else if (mediaSource.SupportsTranscoding) {
-                    mediaUrl = apiClient.getUrl(mediaSource.TranscodingUrl);
+                    mediaUrl = /^https?:\/\//i.test(mediaSource.TranscodingUrl) ?
+                        mediaSource.TranscodingUrl :
+                        apiClient.getUrl(mediaSource.TranscodingUrl);
 
                     if (mediaSource.TranscodingSubProtocol === 'hls') {
                         contentType = 'application/x-mpegURL';
