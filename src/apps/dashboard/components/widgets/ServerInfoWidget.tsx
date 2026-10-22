@@ -4,8 +4,7 @@ import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Skeleton from '@mui/material/Skeleton';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-import { Link } from 'react-router-dom';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import React from 'react';
@@ -16,13 +15,17 @@ import globalize from 'lib/globalize';
 import Widget from './Widget';
 
 type ServerInfoWidgetProps = {
+    onScanLibrariesClick?: () => void;
     onRestartClick?: () => void;
     onShutdownClick?: () => void;
+    isScanning?: boolean;
 };
 
 const ServerInfoWidget = ({
+    onScanLibrariesClick,
     onRestartClick,
-    onShutdownClick
+    onShutdownClick,
+    isScanning
 }: ServerInfoWidgetProps) => {
     const { data: systemInfo, isPending } = useSystemInfo();
 
@@ -70,14 +73,15 @@ const ServerInfoWidget = ({
                     spacing={1.5}
                 >
                     <Button
-                        component={Link}
-                        to='/dashboard/libraries'
-                        startIcon={<VideoLibraryIcon />}
+                        onClick={onScanLibrariesClick}
+                        startIcon={<RefreshIcon />}
                         sx={{
                             fontWeight: 'bold'
                         }}
+                        loading={isScanning}
+                        loadingPosition='start'
                     >
-                        {globalize.translate('HeaderLibraries')}
+                        {globalize.translate('ButtonScanAllLibraries')}
                     </Button>
 
                     <Button

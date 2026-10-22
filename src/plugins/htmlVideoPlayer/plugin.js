@@ -564,38 +564,13 @@ export class HtmlVideoPlayer {
 
                 const includeCorsCredentials = await getIncludeCorsCredentials();
 
-                let grant = new URL(url, window.location.href).searchParams.get('grant');
-                let renewal;
-                const renewGrant = async () => {
-                    if (!grant || Number(grant.split('.')[4]) * 1000 - Date.now() > 120000) return;
-                    if (!renewal) {
-                        const apiClient = ServerConnections.getApiClient(options.item.ServerId);
-                        renewal = apiClient.ajax({
-                            type: 'POST',
-                            url: apiClient.getUrl(`ManagedMedia/${options.item.Id}/Grant`, { generation: grant.split('.')[2] }),
-                            dataType: 'json'
-                        }).then(result => {
-                            grant = result.Grant;
-                        }).finally(() => {
-                            renewal = null;
-                        });
-                    }
-                    await renewal;
-                };
-
                 const hls = new Hls({
                     startPosition: options.playerStartPositionTicks / 10000000,
                     manifestLoadingTimeOut: 20000,
                     maxBufferLength: maxBufferLength,
                     maxMaxBufferLength: maxBufferLength,
                     videoPreference: { preferHDR: true },
-                    async xhrSetup(xhr, resourceUrl) {
-                        if (grant) {
-                            await renewGrant();
-                            const resource = new URL(resourceUrl);
-                            resource.searchParams.set('grant', grant);
-                            xhr.open('GET', resource.toString(), true);
-                        }
+                    xhrSetup(xhr) {
                         xhr.withCredentials = includeCorsCredentials;
                     }
                 });
