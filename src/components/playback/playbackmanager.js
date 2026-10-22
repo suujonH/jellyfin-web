@@ -1361,6 +1361,106 @@ export class PlaybackManager {
             }
         };
 
+        /**
+         * Gets the versions the item played can be switched between, and the one chosen: the one asked for, which can differ
+         * from the source playing, such as the original that "Auto" of pre-encoded HLS plays; otherwise the one playing.
+         * @param {Object} [player] The player.
+         * @returns {{ mediaSources: Array, selectedId: string } | null} The versions, or null when there is only one.
+         */
+        self.getMediaSources = function (player) {
+            player = player || self._currentPlayer;
+            if (!player || !enableLocalPlaylistManagement(player)) {
+                return null;
+            }
+
+            // The queue of SyncPlay is shared with the group, which a switch of this player alone does not follow.
+            if (pluginManager.firstOfType(PluginType.SyncPlay)?.instance?.Manager.isSyncPlayEnabled()) {
+                return null;
+            }
+
+            const streamInfo = getPlayerData(player).streamInfo;
+            const mediaSources = streamInfo?.mediaSources;
+            if (!mediaSources || mediaSources.length < 2) {
+                return null;
+            }
+
+            const isVersion = id => !!id && mediaSources.some(s => s.Id === id);
+            const requested = streamInfo.requestedMediaSourceId;
+            const playing = streamInfo.mediaSource?.Id;
+            let selectedId = mediaSources[0].Id;
+            if (isVersion(requested)) {
+                selectedId = requested;
+            } else if (isVersion(playing)) {
+                selectedId = playing;
+            }
+
+            return { mediaSources, selectedId };
+        };
+
+        /**
+         * Switches the item played to another of its versions, from the current position. The item is played again as the
+         * next one would be, so its tracks, chapters and trickplay are those of the version.
+         * @param {string} mediaSourceId The version.
+         * @param {Object} [player] The player.
+         */
+        self.setMediaSource = function (mediaSourceId, player) {
+            player = player || self._currentPlayer;
+            const versions = self.getMediaSources(player);
+            const target = versions?.mediaSources.find(s => s.Id === mediaSourceId);
+            if (!target || mediaSourceId === versions.selectedId) {
+                return;
+            }
+
+            // The item of the queue, as the item played has the chapters and trickplay of the version played.
+            const index = self.getCurrentPlaylistIndex(player);
+            const playlistItemId = self.getCurrentPlaylistItemId(player);
+            const item = self._playQueueManager.getPlaylist()[index] || self.currentItem(player);
+            const prevSource = getPreviousSource(player);
+
+            // A track is the one of the version with the same index, language, title and dispositions, as the pre-encoded
+            // versions of an item keep them; otherwise the tracks are matched as for the next item, or are the version's
+            // defaults. Subtitles turned off stay off.
+            const isSameTrack = (a, b) => ['Language', 'Title', 'IsForced', 'IsHearingImpaired']
+                .every(key => (a[key] ?? null) === (b[key] ?? null) || (key.startsWith('Is') && !a[key] === !b[key]));
+            const findStream = (type, streamIndex) => {
+                const current = prevSource.MediaStreams?.find(s => s.Type === type && s.Index === streamIndex);
+                const same = target.MediaStreams?.find(s => s.Type === type && s.Index === streamIndex);
+                return current && same && isSameTrack(current, same) ? streamIndex : null;
+            };
+            const subtitleIndex = prevSource.DefaultSubtitleStreamIndex;
+            const playOptions = {
+                ...(item.playOptions || getDefaultPlayOptions()),
+                mediaSourceId,
+                startPositionTicks: getCurrentTicks(player),
+                audioStreamIndex: findStream('Audio', prevSource.DefaultAudioStreamIndex),
+                subtitleStreamIndex: subtitleIndex === -1 ? -1 : findStream('Subtitle', subtitleIndex),
+                // The tracks found above are kept rather than ranked again.
+                keepStreamIndexes: true
+            };
+
+            // The other parts of a version in parts are queued after it, as when it is played from the start. The item played
+            // is then that version, which offers no switching, so no parts of another version stay queued.
+            const apiClient = ServerConnections.getApiClient(item.ServerId);
+            const userId = apiClient.getCurrentUserId();
+            return apiClient.getItem(userId, mediaSourceId).catch(() => null).then(function (version) {
+                if ((version?.PartCount ?? 1) <= 1) {
+                    return [];
+                }
+
+                return apiClient.getAdditionalVideoParts(userId, mediaSourceId).then(result => result.Items || [], () => []);
+            }).then(function (parts) {
+                return playInternal(item, playOptions, function () {
+                    setPlaylistState(playlistItemId, index);
+                    // The entry of the queue plays this version when it is played again.
+                    item.playOptions = { ...(item.playOptions || getDefaultPlayOptions()), mediaSourceId };
+                    if (parts.length) {
+                        self._playQueueManager.queueNext(parts);
+                        Events.trigger(player, 'playlistitemadd');
+                    }
+                }, prevSource);
+            });
+        };
+
         function getSavedMaxStreamingBitrate(apiClient, mediaType) {
             if (!apiClient) {
                 // This should hopefully never happen
@@ -1761,6 +1861,9 @@ export class PlaybackManager {
                         currentMediaSource = result.MediaSources[0];
 
                         const streamInfo = createStreamInfo(apiClient, currentItem.MediaType, currentItem, currentMediaSource, ticks, player);
+                        const previousStreamInfo = getPlayerData(player).streamInfo;
+                        streamInfo.mediaSources = previousStreamInfo?.mediaSources;
+                        streamInfo.requestedMediaSourceId = previousStreamInfo?.requestedMediaSourceId;
                         streamInfo.fullscreen = currentPlayOptions.fullscreen;
                         streamInfo.lastMediaInfoQuery = lastMediaInfoQuery;
                         streamInfo.resetSubtitleOffset = false;
@@ -2693,6 +2796,9 @@ export class PlaybackManager {
                     mediaSourceId = versionSource.Id;
                 }
 
+                // The version asked for, before the item is named for the tracks: none is the first, such as "Auto".
+                const requestedMediaSourceId = mediaSourceId;
+
                 const mediaStreams = versionSource?.MediaStreams || sourceItem?.MediaStreams || [];
 
                 const audioStreamIndex = playOptions.audioStreamIndex;
@@ -2722,11 +2828,14 @@ export class PlaybackManager {
                 let isIdFallbackNeeded = false;
 
                 autoSetNextTracks(prevSource, mediaStreams, trackOptions, user.Configuration.RememberAudioSelections, user.Configuration.RememberSubtitleSelections);
-                if (trackOptions.DefaultAudioStreamIndex != null) {
+                // A version switched to keeps the tracks found for it; the others are ranked.
+                const keepAudio = playOptions.keepStreamIndexes && audioStreamIndex != null;
+                const keepSubtitle = playOptions.keepStreamIndexes && subtitleStreamIndex != null;
+                if (trackOptions.DefaultAudioStreamIndex != null && !keepAudio) {
                     options.audioStreamIndex = trackOptions.DefaultAudioStreamIndex;
                     isIdFallbackNeeded = true;
                 }
-                if (trackOptions.DefaultSubtitleStreamIndex != null) {
+                if (trackOptions.DefaultSubtitleStreamIndex != null && !keepSubtitle) {
                     options.subtitleStreamIndex = trackOptions.DefaultSubtitleStreamIndex;
                     isIdFallbackNeeded = true;
                 }
@@ -2758,6 +2867,9 @@ export class PlaybackManager {
                     const playedItem = await getItemOfMediaSource(apiClient, item, mediaSource, sourceItem);
 
                     const streamInfo = createStreamInfo(apiClient, item.MediaType, playedItem, mediaSource, startPosition, player);
+                    // A video in parts plays the parts of the version started; switching would leave them in the queue.
+                    streamInfo.mediaSources = (sourceItem?.PartCount ?? item.PartCount ?? 1) > 1 ? null : sourceItem?.MediaSources;
+                    streamInfo.requestedMediaSourceId = requestedMediaSourceId;
                     streamInfo.aspectRatio = playOptions.aspectRatio;
                     streamInfo.fullscreen = playOptions.fullscreen;
 

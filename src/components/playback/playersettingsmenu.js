@@ -54,6 +54,28 @@ function showQualityMenu(player, btn) {
     });
 }
 
+function showVersionMenu(player, btn) {
+    const versions = playbackManager.getMediaSources(player);
+    if (!versions) {
+        return Promise.resolve();
+    }
+
+    const menuItems = versions.mediaSources.map(function (source) {
+        return {
+            name: source.Name || source.Id,
+            id: source.Id,
+            selected: source.Id === versions.selectedId
+        };
+    });
+
+    return actionsheet.show({
+        items: menuItems,
+        positionTo: btn
+    }).then(function (id) {
+        playbackManager.setMediaSource(id, player);
+    });
+}
+
 function showRepeatModeMenu(player, btn) {
     const menuItems = [];
     const currentValue = playbackManager.getRepeatMode(player);
@@ -203,6 +225,17 @@ function showWithUser(options, player, user) {
         });
     }
 
+    const versions = playbackManager.getMediaSources(player);
+    if (versions) {
+        const selectedVersion = versions.mediaSources.find(s => s.Id === versions.selectedId);
+
+        menuItems.push({
+            name: globalize.translate('LabelVersion'),
+            id: 'version',
+            asideText: selectedVersion?.Name || null
+        });
+    }
+
     if (options.quality && supportedCommands.includes('SetMaxStreamingBitrate')
             && user?.Policy?.EnableVideoPlaybackTranscoding) {
         const secondaryQualityText = getQualitySecondaryText(player);
@@ -264,6 +297,8 @@ export function show(options) {
 
 function handleSelectedOption(id, options, player) {
     switch (id) {
+        case 'version':
+            return showVersionMenu(player, options.positionTo);
         case 'quality':
             return showQualityMenu(player, options.positionTo);
         case 'aspectratio':
