@@ -31,7 +31,10 @@ const PLAYBACK_PATHS = [
     '/dashboard/playback/transcoding',
     '/dashboard/playback/resume',
     '/dashboard/playback/streaming',
-    '/dashboard/playback/trickplay'
+    '/dashboard/playback/trickplay',
+    '/dashboard/hls/status',
+    '/dashboard/hls/settings',
+    '/dashboard/hls/jobs'
 ];
 
 const ServerDrawerSection = () => {
@@ -149,6 +152,13 @@ const ServerDrawerSection = () => {
                     </ListItemLink>
                     <ListItemLink to='/dashboard/playback/trickplay' sx={{ pl: 4 }}>
                         <ListItemText inset primary={globalize.translate('Trickplay')} />
+                    </ListItemLink>
+                    <ListItemLink
+                        to='/dashboard/hls/status'
+                        includePaths={[ '/dashboard/hls', '/dashboard/hls/settings', '/dashboard/hls/jobs' ]}
+                        sx={{ pl: 4 }}
+                    >
+                        <ListItemText inset primary={globalize.translate('HeaderHls')} />
                     </ListItemLink>
                 </List>
             </Collapse>

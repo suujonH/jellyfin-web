@@ -20,6 +20,8 @@ export const ASYNC_ADMIN_ROUTES: AsyncRoute[] = [
     { path: 'networking', type: AppType.Dashboard },
     { path: 'networkstorage', type: AppType.Dashboard },
     { path: 'networkstorage/:tab', page: 'networkstorage', type: AppType.Dashboard },
+    { path: 'hls', type: AppType.Dashboard },
+    { path: 'hls/:tab', page: 'hls', type: AppType.Dashboard },
     { path: 'playback/resume', type: AppType.Dashboard },
     { path: 'playback/streaming', type: AppType.Dashboard },
     { path: 'playback/transcoding', type: AppType.Dashboard },
