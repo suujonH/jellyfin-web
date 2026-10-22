@@ -1,4 +1,4 @@
-import type { BaseItemDto, NameIdPair, SyncPlayUserAccessType, UserDto } from '@jellyfin/sdk/lib/generated-client';
+import type { BaseItemDto, NameIdPair, SyncPlayUserAccessType, UserDto, UserPolicy } from '@jellyfin/sdk/lib/generated-client';
 import escapeHTML from 'escape-html';
 import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +22,11 @@ import Toast from 'apps/dashboard/components/Toast';
 interface ProfileProps {
     userDto: UserDto;
 }
+
+/** The policy with the permission of pre-encoded HLS, which the generated client does not know yet. */
+type OriginalPlaybackPolicy = UserPolicy & {
+    EnableOriginalPlayback?: boolean
+};
 
 type ResetProvider = BaseItemDto & {
     checkedAttribute: string
@@ -194,6 +199,7 @@ const Profile = ({ userDto }: ProfileProps) => {
         (page.querySelector('.chkEnableAudioPlaybackTranscoding') as HTMLInputElement).checked = !!userDto.Policy?.EnableAudioPlaybackTranscoding;
         (page.querySelector('.chkEnableVideoPlaybackTranscoding') as HTMLInputElement).checked = !!userDto.Policy?.EnableVideoPlaybackTranscoding;
         (page.querySelector('.chkEnableVideoPlaybackRemuxing') as HTMLInputElement).checked = !!userDto.Policy?.EnablePlaybackRemuxing;
+        (page.querySelector('.chkEnableOriginalPlayback') as HTMLInputElement).checked = !!(userDto.Policy as OriginalPlaybackPolicy | undefined)?.EnableOriginalPlayback;
         (page.querySelector('.chkForceRemoteSourceTranscoding') as HTMLInputElement).checked = !!userDto.Policy?.ForceRemoteSourceTranscoding;
         (page.querySelector('.chkRemoteAccess') as HTMLInputElement).checked = userDto.Policy?.EnableRemoteAccess == null || userDto.Policy?.EnableRemoteAccess;
         (page.querySelector('#txtRemoteClientBitrateLimit') as HTMLInputElement).value = userDto.Policy?.RemoteClientBitrateLimit && userDto.Policy?.RemoteClientBitrateLimit > 0 ?
@@ -233,6 +239,7 @@ const Profile = ({ userDto }: ProfileProps) => {
             user.Policy.EnableAudioPlaybackTranscoding = (page.querySelector('.chkEnableAudioPlaybackTranscoding') as HTMLInputElement).checked;
             user.Policy.EnableVideoPlaybackTranscoding = (page.querySelector('.chkEnableVideoPlaybackTranscoding') as HTMLInputElement).checked;
             user.Policy.EnablePlaybackRemuxing = (page.querySelector('.chkEnableVideoPlaybackRemuxing') as HTMLInputElement).checked;
+            (user.Policy as OriginalPlaybackPolicy).EnableOriginalPlayback = (page.querySelector('.chkEnableOriginalPlayback') as HTMLInputElement).checked;
             user.Policy.EnableCollectionManagement = (page.querySelector('.chkEnableCollectionManagement') as HTMLInputElement).checked;
             user.Policy.EnableSubtitleManagement = (page.querySelector('.chkEnableSubtitleManagement') as HTMLInputElement).checked;
             user.Policy.ForceRemoteSourceTranscoding = (page.querySelector('.chkForceRemoteSourceTranscoding') as HTMLInputElement).checked;
@@ -438,6 +445,10 @@ const Profile = ({ userDto }: ProfileProps) => {
                         <CheckBoxElement
                             className='chkForceRemoteSourceTranscoding'
                             title='OptionForceRemoteSourceTranscoding'
+                        />
+                        <CheckBoxElement
+                            className='chkEnableOriginalPlayback'
+                            title='OptionAllowOriginalPlayback'
                         />
                     </div>
                     <div className='fieldDescription'>
