@@ -1,76 +1,71 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
 import Alert from '@mui/material/Alert';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormGroup from '@mui/material/FormGroup';
 import Stack from '@mui/material/Stack';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableHead from '@mui/material/TableHead';
-import TablePagination from '@mui/material/TablePagination';
-import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import ExpandMore from '@mui/icons-material/ExpandMore';
 
 import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
-import { formatSize, networkStorageRequest, type ResourcePage, ResourceState } from '../api/networkStorage';
+import { formatSize, networkStorageRequest, ResourceState, type StorageGroup, StorageGroupKind } from '../api/networkStorage';
+import ResourceTable from './ResourceTable';
 
-const ALL_ROWS = -1;
-const DEFAULT_STATES = [ ResourceState.Invalid, ResourceState.Unknown ];
+const DEFAULT_STATES = Object.values(ResourceState);
 
-const STATE_COLORS: Record<ResourceState, 'success' | 'error' | 'default'> = {
-    [ResourceState.Valid]: 'success',
-    [ResourceState.Invalid]: 'error',
-    [ResourceState.Unknown]: 'default'
+const getGroupName = (group: StorageGroup) => {
+    if (group.Kind === StorageGroupKind.Orphans) return globalize.translate('NetworkStorageOrphans');
+    return group.Name ?? globalize.translate('NetworkStorageUnknownLibrary');
 };
+
+const GroupSummary = ({ group }: { group: StorageGroup }) => (
+    <Stack spacing={1} sx={{ width: '100%' }}>
+        <Typography fontWeight='bold'>{getGroupName(group)}</Typography>
+        <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
+            <Chip size='small' label={globalize.translate('NetworkStorageResourceCount', group.ResourceCount)} />
+            <Chip
+                size='small'
+                label={globalize.translate('NetworkStorageTotalSize', formatSize(group.TotalSize))
+                    + (group.UndeclaredSizeCount > 0 ? ` · ${globalize.translate('NetworkStorageUndeclaredSize', group.UndeclaredSizeCount)}` : '')}
+            />
+            <Chip size='small' variant='outlined' label={globalize.translate('NetworkStorageHlsSize', formatSize(group.HlsSize))} />
+            <Chip size='small' variant='outlined' label={globalize.translate('NetworkStorageSourceSize', formatSize(group.SourceSize))} />
+            <Chip size='small' color='success' variant='outlined' label={`${globalize.translate('NetworkStorageStateValid')} ${group.ValidCount}`} />
+            <Chip size='small' color='error' variant='outlined' label={`${globalize.translate('NetworkStorageStateInvalid')} ${group.InvalidCount}`} />
+            <Chip size='small' variant='outlined' label={`${globalize.translate('NetworkStorageStateUnknown')} ${group.UnknownCount}`} />
+        </Stack>
+    </Stack>
+);
 
 interface StorageResourcesProps {
     storageKey: string;
 }
 
-/** The resources of one storage, invalid and unknown ones first. */
+/** The resources of one storage, by library and series, the contents no item refers to last. */
 const StorageResources = ({ storageKey }: StorageResourcesProps) => {
     const { api } = useApi();
     const [ states, setStates ] = useState<ResourceState[]>(DEFAULT_STATES);
-    const [ page, setPage ] = useState(0);
-    const [ pageSize, setPageSize ] = useState(10);
 
     const query = useQuery({
-        queryKey: [ 'NetworkStorageResources', api?.basePath, storageKey, states, page, pageSize ],
-        queryFn: ({ signal }) => networkStorageRequest<ResourcePage>(api!, `/Storages/${encodeURIComponent(storageKey)}/Resources`, {
+        queryKey: [ 'NetworkStorageGroups', api?.basePath, storageKey, states ],
+        queryFn: ({ signal }) => networkStorageRequest<StorageGroup[]>(api!, `/Storages/${encodeURIComponent(storageKey)}/Groups`, {
             signal,
-            params: {
-                states,
-                startIndex: pageSize === ALL_ROWS ? 0 : page * pageSize,
-                limit: pageSize === ALL_ROWS ? undefined : pageSize
-            },
+            params: { states },
             paramsSerializer: { indexes: null }
         }),
         // No state selected matches nothing; the server would read an empty list as every state.
         enabled: !!api && states.length > 0
     });
-    const data = states.length > 0 ? query.data : { Items: [], TotalRecordCount: 0, StartIndex: 0 };
-
-    // A refresh, such as after a check, can leave fewer resources than the selected page starts at.
-    const total = data?.TotalRecordCount;
-    useEffect(() => {
-        if (total !== undefined && pageSize !== ALL_ROWS && page > 0 && page * pageSize >= total) {
-            setPage(Math.max(0, Math.ceil(total / pageSize) - 1));
-        }
-    }, [ page, pageSize, total ]);
+    const groups = states.length > 0 ? query.data : [];
 
     const toggleState = useCallback((state: ResourceState, checked: boolean) => {
         setStates(previous => checked ? [ ...previous, state ] : previous.filter(s => s !== state));
-        setPage(0);
-    }, []);
-
-    const onPageChange = useCallback((_: unknown, value: number) => setPage(value), []);
-    const onPageSizeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setPageSize(Number(e.target.value));
-        setPage(0);
     }, []);
 
     return (
@@ -92,59 +87,34 @@ const StorageResources = ({ storageKey }: StorageResourcesProps) => {
 
             {query.isError && <Alert severity='error'>{globalize.translate('NetworkStorageError')}</Alert>}
 
-            {data && data.TotalRecordCount === 0 ? (
+            {groups?.length === 0 && (
                 <Typography color='text.secondary'>{globalize.translate('NetworkStorageNoResources')}</Typography>
-            ) : (
-                <Table size='small'>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>{globalize.translate('LabelName')}</TableCell>
-                            <TableCell>{globalize.translate('NetworkStorageTarget')}</TableCell>
-                            <TableCell>{globalize.translate('NetworkStorageSize')}</TableCell>
-                            <TableCell>{globalize.translate('NetworkStorageStateHeader')}</TableCell>
-                            <TableCell>{globalize.translate('NetworkStorageIssueHeader')}</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {data?.Items.map(resource => (
-                            <TableRow key={resource.ItemId}>
-                                <TableCell>
-                                    {resource.SeriesName ? `${resource.SeriesName} - ${resource.Name ?? ''}` : resource.Name}
-                                </TableCell>
-                                <TableCell sx={{ wordBreak: 'break-all' }}>{resource.Target ?? resource.Path}</TableCell>
-                                <TableCell>{resource.Size == null ? '-' : formatSize(resource.Size)}</TableCell>
-                                <TableCell>
-                                    <Chip
-                                        size='small'
-                                        color={STATE_COLORS[resource.State]}
-                                        label={globalize.translate(`NetworkStorageState${resource.State}`)}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    {resource.Issue && globalize.translate(`NetworkStorageIssue${resource.Issue}`)}
-                                    {resource.StatusCode ? ` (${resource.StatusCode})` : ''}
-                                    {resource.DateLastFailed && (
-                                        <Typography variant='caption' display='block' color='text.secondary'>
-                                            {new Date(resource.DateLastFailed).toLocaleString()}
-                                            {resource.FailureSource && ' · ' + globalize.translate('NetworkStorageSource' + resource.FailureSource)}
-                                        </Typography>
-                                    )}
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
             )}
 
-            <TablePagination
-                component='div'
-                count={data?.TotalRecordCount ?? 0}
-                page={pageSize === ALL_ROWS ? 0 : page}
-                rowsPerPage={pageSize}
-                rowsPerPageOptions={[ 10, 100, { label: globalize.translate('All'), value: ALL_ROWS } ]}
-                onPageChange={onPageChange}
-                onRowsPerPageChange={onPageSizeChange}
-            />
+            {groups?.map(group => (
+                <Accordion key={group.Key} slotProps={{ transition: { unmountOnExit: true } }}>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                        <GroupSummary group={group} />
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        <Stack spacing={1}>
+                            {group.Children.map(child => (
+                                <Accordion key={child.Key} slotProps={{ transition: { unmountOnExit: true } }}>
+                                    <AccordionSummary expandIcon={<ExpandMore />}>
+                                        <GroupSummary group={child} />
+                                    </AccordionSummary>
+                                    <AccordionDetails>
+                                        <ResourceTable storageKey={storageKey} states={states} group={child.Key} />
+                                    </AccordionDetails>
+                                </Accordion>
+                            ))}
+                            {(group.Kind === StorageGroupKind.Orphans || group.LooseCount > 0) && (
+                                <ResourceTable storageKey={storageKey} states={states} group={group.Key} />
+                            )}
+                        </Stack>
+                    </AccordionDetails>
+                </Accordion>
+            ))}
         </Stack>
     );
 };

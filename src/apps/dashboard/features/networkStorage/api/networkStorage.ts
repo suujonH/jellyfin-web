@@ -24,8 +24,62 @@ export interface StorageSummary {
     ValidCount: number;
     InvalidCount: number;
     UnknownCount: number;
+    /** The sources in the storage and the pre-encoded HLS, each content once. */
     TotalSize: number;
+    SourceSize: number;
+    HlsSize: number;
     UndeclaredSizeCount: number;
+}
+
+export enum HlsRenditionKind {
+    Video = 'Video',
+    Audio = 'Audio',
+    Subtitle = 'Subtitle',
+    Preview = 'Preview'
+}
+
+export interface HlsRendition {
+    Key: string;
+    Kind: HlsRenditionKind;
+    /** The video quality, such as 1080; 0 for other kinds. */
+    Quality: number;
+    Language: string;
+    Title: string;
+    Channels: number;
+    Size: number;
+    FileCount: number;
+    /** The root of the HLS store it is in. */
+    Location: string;
+    /** Not set: in no network storage. */
+    StorageKey?: string | null;
+    /** Whether it is in the storage listed, and counted in its sizes. */
+    InStorage: boolean;
+}
+
+export enum StorageGroupKind {
+    Library = 'Library',
+    Series = 'Series',
+    Orphans = 'Orphans'
+}
+
+export interface StorageGroup {
+    /** Lists the resources of the group: library:{id}, library:none, series:{id} or orphans. */
+    Key: string;
+    Kind: StorageGroupKind;
+    Name?: string | null;
+    LibraryId?: string | null;
+    SeriesId?: string | null;
+    ResourceCount: number;
+    ValidCount: number;
+    InvalidCount: number;
+    UnknownCount: number;
+    UndeclaredSizeCount: number;
+    TotalSize: number;
+    HlsSize: number;
+    SourceSize: number;
+    /** The resources of a library in no series. */
+    LooseCount: number;
+    Children: StorageGroup[];
 }
 
 export interface StorageResource {
@@ -43,6 +97,23 @@ export interface StorageResource {
     FailureSource?: string | null;
     DateLastFailed?: string | null;
     FailureCount: number;
+    LibraryId?: string | null;
+    LibraryName?: string | null;
+    SeriesId?: string | null;
+    SeasonNumber?: number | null;
+    EpisodeNumber?: number | null;
+    Sha256?: string | null;
+    /** Whether the source is in the storage listed, and counted in its sizes. */
+    SourceInStorage: boolean;
+    /** Not set: the source is in no network storage. */
+    SourceStorageKey?: string | null;
+    HlsSize: number;
+    /** What of the resource is in the storage listed. */
+    TotalSize: number;
+    HlsRenditions: HlsRendition[];
+    /** A content no item refers to any longer. */
+    IsOrphan: boolean;
+    DateOrphanExpires?: string | null;
 }
 
 export interface ResourcePage {
@@ -135,3 +206,5 @@ export const formatSize = (bytes: number) => {
     }
     return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
 };
+
+export const EMPTY_ID = '00000000-0000-0000-0000-000000000000';
