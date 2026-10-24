@@ -52,6 +52,9 @@ import 'elements/emby-select/emby-select';
 
 import 'styles/scrollstyles.scss';
 
+// The provider id the server marks a version item of pre-encoded HLS with.
+const HLS_VERSION_MARKER = 'DistributedHls';
+
 /** Item types that use a list view for their children. */
 const LIST_VIEW_TYPES = [
     BaseItemKind.MusicAlbum,
@@ -2194,6 +2197,14 @@ export default function (view, params) {
             apiClient.getCurrentUser()
         ]).then(function ([{ data: versionItem }, user]) {
             if (view.querySelector('.selectSource').value !== selectedId) {
+                return;
+            }
+
+            // A quality of pre-encoded HLS is a version item that only stands for a source of this item: it has none of its
+            // metadata, such as the series, the episode or the cast. The page stays on this item, which plays that source.
+            if (versionItem.ProviderIds?.[HLS_VERSION_MARKER]) {
+                reloadPlayButtons(view, currentItem);
+                reloadUserDataButtons(view, currentItem);
                 return;
             }
 
