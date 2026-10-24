@@ -251,12 +251,13 @@ function showWithUser(options, player, user) {
         });
     }
 
-    if (!isHls && options.quality && supportedCommands.includes('SetMaxStreamingBitrate')
-            && user?.Policy?.EnableVideoPlaybackTranscoding) {
+    // An original played beside pre-encoded HLS keeps its bitrates, as the limit chosen still applies to it.
+    if ((!isHls || !isPreEncoded(playbackManager.currentMediaSource(player))) && options.quality
+            && supportedCommands.includes('SetMaxStreamingBitrate') && user?.Policy?.EnableVideoPlaybackTranscoding) {
         const secondaryQualityText = getQualitySecondaryText(player);
 
         menuItems.push({
-            name: globalize.translate('Quality'),
+            name: globalize.translate(isHls ? 'LabelBitrate' : 'Quality'),
             id: 'quality',
             asideText: secondaryQualityText
         });
