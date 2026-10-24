@@ -206,5 +206,3 @@ export const formatSize = (bytes: number) => {
     }
     return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
 };
-
-export const EMPTY_ID = '00000000-0000-0000-0000-000000000000';

@@ -14,7 +14,7 @@ import Typography from '@mui/material/Typography';
 
 import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
-import { EMPTY_ID, formatSize, networkStorageRequest, type ResourcePage, ResourceState } from '../api/networkStorage';
+import { formatSize, networkStorageRequest, type ResourcePage, ResourceState } from '../api/networkStorage';
 import { getRenditionLabel, getResourceTitle, sortRenditions } from '../api/resourceLabels';
 
 const ALL_ROWS = -1;
@@ -89,7 +89,7 @@ const ResourceTable = ({ storageKey, states, group }: ResourceTableProps) => {
                 </TableHead>
                 <TableBody>
                     {data?.Items.map(resource => (
-                        <TableRow key={resource.ItemId === EMPTY_ID ? resource.Sha256 : resource.ItemId}>
+                        <TableRow key={resource.IsOrphan ? resource.Sha256 : resource.ItemId}>
                             <TableCell>
                                 {getResourceTitle(resource)}
                                 {resource.IsOrphan && resource.DateOrphanExpires && (

@@ -125,6 +125,7 @@ const AccessForm = ({ access: initial, onSaved, onCancel }: AccessFormProps) => 
             });
             await queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageAccesses' ] });
             await queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageStorages' ] });
+            await queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageGroups' ] });
             await queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageResources' ] });
             onSaved();
         } catch (err) {
@@ -306,6 +307,7 @@ const AccessTab = () => {
             await networkStorageRequest(api!, `/Accesses/${target.Id}`, { method: 'DELETE' });
             await queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageAccesses' ] });
             await queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageStorages' ] });
+            await queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageGroups' ] });
             await queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageResources' ] });
         } catch (err) {
             setError(getErrorMessage(err) ?? globalize.translate('NetworkStorageError'));
