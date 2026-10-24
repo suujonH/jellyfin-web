@@ -226,17 +226,19 @@ function showWithUser(options, player, user) {
     }
 
     const versions = playbackManager.getMediaSources(player);
+    // The versions of pre-encoded HLS are its qualities, and take the place of the bitrates the server would transcode to.
+    const isHls = !!versions?.mediaSources.some(s => s.Container === 'hls');
     if (versions) {
         const selectedVersion = versions.mediaSources.find(s => s.Id === versions.selectedId);
 
         menuItems.push({
-            name: globalize.translate('LabelVersion'),
+            name: globalize.translate(isHls ? 'Quality' : 'LabelVersion'),
             id: 'version',
             asideText: selectedVersion?.Name || null
         });
     }
 
-    if (options.quality && supportedCommands.includes('SetMaxStreamingBitrate')
+    if (!isHls && options.quality && supportedCommands.includes('SetMaxStreamingBitrate')
             && user?.Policy?.EnableVideoPlaybackTranscoding) {
         const secondaryQualityText = getQualitySecondaryText(player);
 
