@@ -54,13 +54,26 @@ function showQualityMenu(player, btn) {
     });
 }
 
+function isPreEncoded(source) {
+    return source.Container === 'hls';
+}
+
 function showVersionMenu(player, btn) {
     const versions = playbackManager.getMediaSources(player);
     if (!versions) {
         return Promise.resolve();
     }
 
-    const menuItems = versions.mediaSources.map(function (source) {
+    // The qualities of pre-encoded HLS are listed after the originals, and Auto last. The server sends Auto as the first
+    // version of HLS, as it is the one played by default.
+    const auto = versions.mediaSources.find(isPreEncoded);
+    const mediaSources = auto ? [
+        ...versions.mediaSources.filter(s => !isPreEncoded(s)),
+        ...versions.mediaSources.filter(s => isPreEncoded(s) && s !== auto),
+        auto
+    ] : versions.mediaSources;
+
+    const menuItems = mediaSources.map(function (source) {
         return {
             name: source.Name || source.Id,
             id: source.Id,
@@ -227,7 +240,7 @@ function showWithUser(options, player, user) {
 
     const versions = playbackManager.getMediaSources(player);
     // The versions of pre-encoded HLS are its qualities, and take the place of the bitrates the server would transcode to.
-    const isHls = !!versions?.mediaSources.some(s => s.Container === 'hls');
+    const isHls = !!versions?.mediaSources.some(isPreEncoded);
     if (versions) {
         const selectedVersion = versions.mediaSources.find(s => s.Id === versions.selectedId);
 
