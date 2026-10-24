@@ -571,6 +571,9 @@ export class HtmlVideoPlayer {
                     maxBufferLength: maxBufferLength,
                     maxMaxBufferLength: maxBufferLength,
                     videoPreference: { preferHDR: true },
+                    // The subtitles of pre-encoded HLS are shown by the player from their WebVTT file; hls.js would add a
+                    // track of its own, which the player takes as its own and both fill.
+                    enableWebVTT: options.mediaSource?.Container !== 'hls',
                     xhrSetup(xhr) {
                         xhr.withCredentials = includeCorsCredentials;
                     }
