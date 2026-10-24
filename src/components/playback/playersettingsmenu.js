@@ -54,13 +54,26 @@ function showQualityMenu(player, btn) {
     });
 }
 
+function isPreEncoded(source) {
+    return source.Container === 'hls';
+}
+
 function showVersionMenu(player, btn) {
     const versions = playbackManager.getMediaSources(player);
     if (!versions) {
         return Promise.resolve();
     }
 
-    const menuItems = versions.mediaSources.map(function (source) {
+    // The qualities of pre-encoded HLS are listed after the originals, and Auto last. The server sends Auto as the first
+    // version of HLS, as it is the one played by default.
+    const auto = versions.mediaSources.find(isPreEncoded);
+    const mediaSources = auto ? [
+        ...versions.mediaSources.filter(s => !isPreEncoded(s)),
+        ...versions.mediaSources.filter(s => isPreEncoded(s) && s !== auto),
+        auto
+    ] : versions.mediaSources;
+
+    const menuItems = mediaSources.map(function (source) {
         return {
             name: source.Name || source.Id,
             id: source.Id,
@@ -226,22 +239,25 @@ function showWithUser(options, player, user) {
     }
 
     const versions = playbackManager.getMediaSources(player);
+    // The versions of pre-encoded HLS are its qualities, and take the place of the bitrates the server would transcode to.
+    const isHls = !!versions?.mediaSources.some(isPreEncoded);
     if (versions) {
         const selectedVersion = versions.mediaSources.find(s => s.Id === versions.selectedId);
 
         menuItems.push({
-            name: globalize.translate('LabelVersion'),
+            name: globalize.translate(isHls ? 'Quality' : 'LabelVersion'),
             id: 'version',
             asideText: selectedVersion?.Name || null
         });
     }
 
-    if (options.quality && supportedCommands.includes('SetMaxStreamingBitrate')
-            && user?.Policy?.EnableVideoPlaybackTranscoding) {
+    // An original played beside pre-encoded HLS keeps its bitrates, as the limit chosen still applies to it.
+    if ((!isHls || !isPreEncoded(playbackManager.currentMediaSource(player))) && options.quality
+            && supportedCommands.includes('SetMaxStreamingBitrate') && user?.Policy?.EnableVideoPlaybackTranscoding) {
         const secondaryQualityText = getQualitySecondaryText(player);
 
         menuItems.push({
-            name: globalize.translate('Quality'),
+            name: globalize.translate(isHls ? 'LabelBitrate' : 'Quality'),
             id: 'quality',
             asideText: secondaryQualityText
         });
