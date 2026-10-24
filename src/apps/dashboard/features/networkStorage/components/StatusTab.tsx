@@ -56,6 +56,7 @@ const StatusTab = () => {
         if (lastCheckEnd.current !== undefined && lastCheckEnd.current !== checkEnd) {
             // A check finished: it replaced the recorded failures.
             void queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageStorages' ] });
+            void queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageGroups' ] });
             void queryClient.invalidateQueries({ queryKey: [ 'NetworkStorageResources' ] });
         }
         lastCheckEnd.current = checkEnd;
@@ -119,6 +120,8 @@ const StatusTab = () => {
                                 <Chip
                                     size='small'
                                     label={globalize.translate('NetworkStorageTotalSize', formatSize(storage.TotalSize))
+                                        + ` · ${globalize.translate('NetworkStorageHlsSize', formatSize(storage.HlsSize))}`
+                                        + ` · ${globalize.translate('NetworkStorageSourceSize', formatSize(storage.SourceSize))}`
                                         + (storage.UndeclaredSizeCount > 0 ? ` · ${globalize.translate('NetworkStorageUndeclaredSize', storage.UndeclaredSizeCount)}` : '')}
                                 />
                                 <Chip size='small' color='success' variant='outlined' label={`${globalize.translate('NetworkStorageStateValid')} ${storage.ValidCount}`} />
