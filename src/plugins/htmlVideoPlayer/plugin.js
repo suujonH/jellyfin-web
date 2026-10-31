@@ -44,6 +44,7 @@ import { setBackdropTransparency, TRANSPARENCY_LEVEL } from '../../components/ba
 import Events from '../../utils/events.ts';
 import { includesAny } from '../../utils/container.ts';
 import { isHls } from '../../utils/mediaSource.ts';
+import { parseWebVtt } from '../../utils/webVtt.ts';
 
 const NATIVE_UNSUPPORTED_SUBTITLE_CODECS = ['ssa', 'ass', 'pgssub', 'dvdsub', 'vobsub'];
 const ASS_SUBTITLE_CODECS = ['ssa', 'ass'];
@@ -570,6 +571,9 @@ export class HtmlVideoPlayer {
                     maxBufferLength: maxBufferLength,
                     maxMaxBufferLength: maxBufferLength,
                     videoPreference: { preferHDR: true },
+                    // The subtitles of pre-encoded HLS are shown by the player from their WebVTT file; hls.js would add a
+                    // track of its own, which the player takes as its own and both fill.
+                    enableWebVTT: options.mediaSource?.Container !== 'hls',
                     xhrSetup(xhr) {
                         xhr.withCredentials = includeCorsCredentials;
                     }
@@ -1342,15 +1346,18 @@ export class HtmlVideoPlayer {
             return this.fetchSubtitlesUwp(track, item);
         }
 
+        // A subtitle of pre-encoded HLS is the WebVTT file of the store, which the server does not convert to JSON.
+        const isPreEncoded = this._currentPlayOptions?.mediaSource?.Container === 'hls';
+
         this.incrementFetchQueue();
         try {
-            const response = await fetch(getTextTrackUrl(track, item, '.js'));
+            const response = await fetch(getTextTrackUrl(track, item, isPreEncoded ? null : '.js'));
 
             if (!response.ok) {
                 throw new Error(response);
             }
 
-            return response.json();
+            return isPreEncoded ? parseWebVtt(await response.text()) : response.json();
         } finally {
             this.decrementFetchQueue();
         }
